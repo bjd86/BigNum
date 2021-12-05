@@ -29,7 +29,7 @@ class BigNum {
       delete[] num;
     }
 
-    void display() {
+    void display(bool new_line) {
       bool found_nonzero = false;
       if (SIGN) {
         std::cout << "-";
@@ -42,8 +42,11 @@ class BigNum {
           std::cout << num[i];
         }
       }
-      std::cout << std::endl;
-      std::cout << "length: " << get_length() << std::endl;
+      if( new_line == true ) {
+        std::cout << std::endl;
+      }
+      
+      // std::cout << "length: " << get_length() << std::endl;
     }
 
     int get_length() {
@@ -94,7 +97,7 @@ bool magnitude_bigger( BigNum * bignum0, BigNum *bignum1 ) {
 // num0 should be at least as long as bignum1, and should be
 // greater in value
 BigNum* _subtract( BigNum *bignum0, BigNum *bignum1 ) {
-  std::cout << "Subtract" << std::endl;
+  // std::cout << "Subtract" << std::endl;
 
   BigNum *difference_bignum = new BigNum(bignum0 -> get_num(), bignum0 -> get_length(), bignum0 -> get_sign(), bignum0 -> get_verbose());
 
@@ -104,6 +107,7 @@ BigNum* _subtract( BigNum *bignum0, BigNum *bignum1 ) {
   for ( int i = difference_bignum -> get_length() - 1; i >= 0; i-- ) {
     num0_cur_val = difference_bignum -> get_num_at(i);
     num1_cur_val = bignum1 -> get_num_at(i);
+    // std::cout << "i: " << i << " subtracting: " << num0_cur_val << " - " << num1_cur_val;
     // this shouldn't happen when i = 0 bc |bignum0| > |bignum1|
     if( num0_cur_val < num1_cur_val ) {
       temp_index = i - 1;
@@ -121,6 +125,10 @@ BigNum* _subtract( BigNum *bignum0, BigNum *bignum1 ) {
 
     difference_bignum -> set_num_at(i, num0_cur_val - num1_cur_val);
 
+    // std::cout << " = " << difference_bignum -> get_num_at(i) << std::endl;
+
+    // difference_bignum -> display(true);
+
   }
 
   return difference_bignum;
@@ -129,17 +137,24 @@ BigNum* _subtract( BigNum *bignum0, BigNum *bignum1 ) {
 
 // treats both bignum0 and bignum1 as positives, returns new bignum with sum
 BigNum* _add( BigNum *bignum0, BigNum *bignum1 ) {
-  std::cout << "Add" << std::endl;
+  // std::cout << "Add" << std::endl;
+
+  short ten = (short)10;
 
   // don't need to initialize with any values in particular
   BigNum *sum_bignum = new BigNum(bignum0 -> get_length(), 0, bignum0 -> get_verbose());
 
-  short carry = (short)0, sum, sum_mod;
+  short carry = (short)0;
+  short sum = (short)0;
+  short sum_mod = (short)0;
 
   for ( int i = bignum0 -> get_length() - 1; i >= 0; i-- ) {
     sum = bignum0 -> get_num_at(i) + bignum1 -> get_num_at(i) + carry;
-    sum_mod = sum % 10;
-    carry = (sum >= 10) ? (short)1 : (short)0;
+    sum_mod = sum % ten;
+    // std::cout << "adding " << bignum0 -> get_num_at(i) << " + " << bignum1 -> get_num_at(i) << " + " << carry;
+    // std::cout << " got sun_mod " << sum_mod;
+    carry = (sum >= ten) ? (short)1 : (short)0;
+    // std::cout << " got carry " << carry << std::endl;
 
     sum_bignum -> set_num_at(i, sum_mod);
 
@@ -223,7 +238,7 @@ BigNum* add( BigNum *bignum0, BigNum *bignum1 ) {
     bignum0 -> set_sign( 1 );
   } else {
     result = _add( bignum0, bignum1 );
-    result -> set_sign( 1 );
+	result -> set_sign( 1 );
   }
 
   return result;
@@ -232,15 +247,22 @@ BigNum* add( BigNum *bignum0, BigNum *bignum1 ) {
 int main(int argc, char **argv) {
   int i;
 
-  int size = std::stoi(argv[1]);
+  if( argc < 5 ) {
+    std::cout << "Usage is AR bignum1 bignum2 size operation\nopcodes 0:add 1:subtract" << std::endl;
+    exit(0);
+  }
+
+  // int size = std::stoi(argv[1]);
+  int size = std::stoi(argv[3]);
+
+  int operation = std::stoi(argv[4]);
 
   short *bignum_0 = new short[size];
   short *bignum_1 = new short[size];
-  
-  // don't add digits >= 10
+
   for ( i = 0; i < size; i++ ) {
-    bignum_0[i] = i % 10;
-    bignum_1[i] = (size - i - 1) % 10;
+    bignum_0[i] = (short)(int)argv[1][i] - 48;
+    bignum_1[i] = (short)(int)argv[2][i] - 48;
   }
 
   BigNum *bignum0 = new BigNum(bignum_0, size, 0, true);
@@ -251,15 +273,26 @@ int main(int argc, char **argv) {
   // change bignum1 sign
   // bignum1 -> set_sign( 1 );
 
-  bignum0 -> display();
-  bignum1 -> display();
+  // bignum0 -> display(false);
+  // bignum1 -> display(false);
 
-  // add the two
-  // BigNum *result = add(bignum0, bignum1);
-  // subtract the two
-  BigNum *result = subtract(bignum0, bignum1);
+  BigNum *result;
 
-  result -> display();
+  switch(operation) {
+    case 0:
+      // add the two
+      result = add(bignum0, bignum1);
+      break;
+    case 1:
+      // subtract the two
+      result = subtract(bignum0, bignum1);
+      break;
+    default:
+      std::cout << "Invalid operation, you entered " << operation << "\ndefaulting to add" << std::endl;
+      result = add(bignum0, bignum1);
+  }
+
+  result -> display(true);
 
   bignum0 -> delete_bignum();
   bignum1 -> delete_bignum();
