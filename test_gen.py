@@ -3,6 +3,7 @@ import re
 import subprocess
 import sys
 import requests
+import argparse
 
 import numpy as np
 
@@ -13,17 +14,36 @@ class bcolors:
   RESET = '\033[0m' #RESET COLOR
 
 def PASS(message):
-  print(f"{bcolors.OK}{message}{bcolors.RESET}")
+  print(f"\N{Thumbs Up Sign} {bcolors.OK}{message}{bcolors.RESET}")
 
 def FAIL(message):
-  print(f"{bcolors.FAIL}{message}{bcolors.RESET}")
+  print(f"\N{Police Cars Revolving Light} {bcolors.FAIL}{message}{bcolors.RESET}")
+
+# make this global
+VERBOSE = False
+
+operation_list = ["plus", "minus"]
+
+def get_operation(method):
+  if( method == "mixed" ):
+    operation = operation_list[random.randint(0, len(operation_list)-1)]
+  elif( method in operation_list ):
+    operation = method
+  else:
+    FAIL(f"INVAID operation, you selected {method}")
+    operation = None
+  
+  return operation
 
 
-NUM_TESTS = 100
+def get_number_size(selection):
+  if( selection == "random" ):
+    number_size = random.randint(10, 999)
+  else:
+    number_size = int(selection)
 
-VERBOSE = 1
-
-operation_dict = {0 : "plus", 1 : "minus"}
+  return number_size
+  
 
 def sequence_check(bignum0 : str, bignum1 : str, num_digits : int) -> bool:
   if( bignum0[0] == "-" ):
@@ -76,10 +96,22 @@ def get_result_web(num0 : str, num1 : str, operation : str) -> str:
   return re.sub(",", "", result_w_comma)
 
 if( __name__ == '__main__' ):
-  method = int(sys.argv[1])
-  operation_in = int(sys.argv[2])
+  parser = argparse.ArgumentParser(description="Run tests on Big Number calculator, tests generated using www.calculator.net/big-number-calculator.html")
+  parser.add_argument('--method', default="AR", type=str, help="LL or AR for cpp BigNumber calculator, defaults to AR")
+  parser.add_argument("--operation", default="mixed", type=str, help=f'Type of operation to test, default is mixed, select from {" ".join(operation_list)}')
+  parser.add_argument("--number_size", default="random", type=str, help="The size of the numbers you would like to test, keep < 1000")
+  parser.add_argument("--num_tests", default=100, type=int, help="Number of tests you would like to run")
+  parser.add_argument("--VERBOSE", default=False, type=bool, help="Set the verbosity of the run")
+  args = parser.parse_args()
 
-  operation = operation_dict[operation_in]
+  method = args.method
+  operation_in = args.operation
+  # make sure we got a valid operation
+  if( get_operation(operation_in) == None ):
+    sys.exit(1)
+  number_size_in = args.number_size 
+  num_tests = args.num_tests
+  VERBOSE = args.VERBOSE
 
   print("")
 
@@ -103,13 +135,14 @@ if( __name__ == '__main__' ):
   total_failed = 0
 
   with open( test_file, 'w+' ) as f:
-    for j in range(NUM_TESTS):
+    for j in range(num_tests):
       num0 = []
       num1 = []
       num0_str = ""
       num1_str = ""
-      NUMBER_SIZE = random.randint(10,100)
-      for i in range(0, NUMBER_SIZE, 1):
+      operation = get_operation(operation_in)
+      number_size = get_number_size(number_size_in)
+      for i in range(0, number_size, 1):
         num0_digit = random.randint(0, 9)
         num0.append(num0_digit)
         num0_str += str(num0_digit)
@@ -130,16 +163,16 @@ if( __name__ == '__main__' ):
       # result_test2 = bignum0 + bignum1 + BigNumber.BigNumber("1")
       # print(f"test: {result_test2.value == bignum_result.value}")
 
-      if( method == 0 ):
+      if( method == "AR" ):
         if( operation == "minus" ):
-          test_add = f"./AR {num0_str} {num1_str} {NUMBER_SIZE} 1"
+          test_add = f"./AR {num0_str} {num1_str} {number_size} 1"
         else:
-          test_add = f"./AR {num0_str} {num1_str} {NUMBER_SIZE} 0"
+          test_add = f"./AR {num0_str} {num1_str} {number_size} 0"
       else:
         if( operation == "minus" ):
-          test_add = f"./LL {num0_str} {num1_str} {NUMBER_SIZE} 1"
+          test_add = f"./LL {num0_str} {num1_str} {number_size} 1"
         else:
-          test_add = f"./LL {num0_str} {num1_str} {NUMBER_SIZE} 0"
+          test_add = f"./LL {num0_str} {num1_str} {number_size} 0"
 
       if( VERBOSE ):
         print(f"running command: {test_add}\n")
@@ -155,7 +188,7 @@ if( __name__ == '__main__' ):
         print(f"returned value: {cpp_result}")
 
       # trying to avoid using python BigNum because it seems to suck
-      if( sequence_check(cpp_result, bignum_result, NUMBER_SIZE) ):
+      if( sequence_check(cpp_result, bignum_result, number_size) ):
         PASS("Pass")
       else:
         FAIL("Fail")
@@ -167,6 +200,6 @@ if( __name__ == '__main__' ):
   print("\nRESULTS:")
 
   if( total_failed ):
-    FAIL(f"{bcolors.FAIL}Failed{bcolors.RESET} {total_failed} out of {NUM_TESTS} tests with number size {NUMBER_SIZE}")
+    FAIL(f"{bcolors.FAIL}Failed{bcolors.RESET} {total_failed} out of {num_tests} tests")
   else:
-    PASS(f"{bcolors.OK}Passed{bcolors.RESET} {NUM_TESTS} tests with number size {NUMBER_SIZE}")
+    PASS(f"{bcolors.OK}Passed{bcolors.RESET} {num_tests} tests")
